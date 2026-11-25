@@ -6,8 +6,12 @@ from fastapi.staticfiles import StaticFiles
 
 from .ai_review import explain_rule
 from .models import (
-    ExplainRequest, ExplainResponse, TestRequest, TestResponse,
-    ValidateRequest, ValidateResponse,
+    ExplainRequest,
+    ExplainResponse,
+    TestRequest,
+    TestResponse,
+    ValidateRequest,
+    ValidateResponse,
 )
 from .sigma_engine import test_rule, validate_rule
 
