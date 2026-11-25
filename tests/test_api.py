@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from rulesentry.main import app
-from rulesentry.sigma_engine import test_rule, validate_rule
+from rulesentry.sigma_engine import test_rule as evaluate_rule, validate_rule
 
 client = TestClient(app)
 
@@ -37,7 +37,7 @@ def test_validate_invalid_yaml():
 
 
 def test_test_rule_matches_and_does_not_match():
-    result = test_rule(RULE, [
+    result = evaluate_rule(RULE, [
         {"Image": r"C:\Windows\System32\whoami.exe"},
         {"Image": r"C:\Windows\System32\notepad.exe"},
     ])
@@ -58,6 +58,6 @@ def test_api_validate_and_test():
 
 
 def test_test_invalid_rule_is_not_evaluated():
-    result = test_rule("not: a valid sigma structure", [{"x": "y"}])
+    result = evaluate_rule("not: a valid sigma structure", [{"x": "y"}])
     assert result.supported is False
     assert result.results == []
