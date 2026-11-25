@@ -9,6 +9,8 @@ import re
 from typing import Any
 
 import yaml
+from yaml.constructor import ConstructorError
+from yaml.nodes import MappingNode
 
 from .models import Diagnostic, EventResult, TestResponse, ValidateResponse
 
@@ -21,9 +23,35 @@ class RuleError(ValueError):
     """Raised when input cannot be interpreted by this subset engine."""
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """Safe YAML loader that rejects duplicate mapping keys."""
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict[Any, Any]:
+        if not isinstance(node, MappingNode):
+            raise ConstructorError(None, None, "expected a mapping node", node.start_mark)
+        self.flatten_mapping(node)
+        mapping: dict[Any, Any] = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                hash(key)
+            except TypeError as exc:
+                raise ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    "found an unhashable key", key_node.start_mark,
+                ) from exc
+            if key in mapping:
+                raise ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    f"found duplicate key {key!r}", key_node.start_mark,
+                )
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
+
 def parse_rule(source: str) -> dict[str, Any]:
     try:
-        value = yaml.safe_load(source)
+        value = yaml.load(source, Loader=_UniqueKeyLoader)
     except yaml.YAMLError as exc:
         raise RuleError(f"Invalid YAML: {exc}") from exc
     if not isinstance(value, dict):
