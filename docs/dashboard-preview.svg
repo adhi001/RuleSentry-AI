@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960">
+<defs>
+ <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#111c2d"/></linearGradient>
+ <linearGradient id="accent" x2="1"><stop stop-color="#22c7a5"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
+ <style>
+ .ui{font-family:Inter,Segoe UI,Arial,sans-serif}.muted{fill:#91a2b8}.white{fill:#edf4fb}.small{font-size:13px}.label{font-size:12px;letter-spacing:1.3px;fill:#8194aa}.body{font-size:15px;fill:#d8e3ef}.mono{font-family:Consolas,monospace;font-size:14px;fill:#c6d5e6}
+ </style>
+</defs>
+<rect width="1440" height="960" fill="url(#bg)"/>
+<rect x="0" y="0" width="248" height="960" fill="#0a101b"/>
+<circle cx="38" cy="42" r="17" fill="url(#accent)"/><path d="M30 42h16M38 34v16" stroke="#07131e" stroke-width="3" stroke-linecap="round"/>
+<text x="67" y="39" class="ui white" font-size="20" font-weight="700">RuleSentry</text><text x="67" y="58" class="ui muted" font-size="10" letter-spacing="2">DETECTION WORKBENCH</text>
+<text x="28" y="112" class="ui label">WORKSPACE</text>
+<rect x="16" y="128" width="216" height="44" rx="9" fill="#17283a"/><rect x="16" y="128" width="3" height="44" rx="2" fill="#2dd4bf"/>
+<text x="48" y="156" class="ui white" font-size="14" font-weight="600">Overview</text>
+<text x="48" y="211" class="ui body">Rule validation</text><text x="48" y="258" class="ui body">Event testing</text><text x="48" y="305" class="ui body">Rule library</text><text x="48" y="352" class="ui body">AI review</text>
+<text x="28" y="426" class="ui label">RESOURCES</text><text x="48" y="466" class="ui body">API documentation</text><text x="48" y="513" class="ui body">Settings</text>
+<rect x="20" y="866" width="208" height="66" rx="10" fill="#111e2d" stroke="#26384c"/>
+<circle cx="43" cy="889" r="5" fill="#fbbf24"/><text x="58" y="894" class="ui white" font-size="12">Local engine</text><text x="36" y="916" class="ui muted small">AI review optional · API key required</text>
+<text x="286" y="54" class="ui muted small">WORKSPACE  /  OVERVIEW</text><text x="286" y="98" class="ui white" font-size="30" font-weight="700">Detection engineering</text><text x="286" y="127" class="ui muted" font-size="15">Validate Sigma-style rules. Test events. Understand every result.</text>
+<rect x="1190" y="43" width="206" height="42" rx="9" fill="#16283a" stroke="#2a4057"/><circle cx="1212" cy="64" r="5" fill="#2dd4bf"/><text x="1227" y="69" class="ui body small">API connected · local</text>
+<g>
+ <rect x="286" y="158" width="258" height="104" rx="12" fill="#142235" stroke="#273a50"/><text x="308" y="187" class="ui label">RULES VALIDATED</text><text x="308" y="231" class="ui white" font-size="30" font-weight="700">24</text><text x="380" y="230" class="ui muted small">this workspace</text>
+ <rect x="560" y="158" width="258" height="104" rx="12" fill="#142235" stroke="#273a50"/><text x="582" y="187" class="ui label">EVENTS TESTED</text><text x="582" y="231" class="ui white" font-size="30" font-weight="700">186</text><text x="655" y="230" class="ui muted small">sample events</text>
+ <rect x="834" y="158" width="258" height="104" rx="12" fill="#142235" stroke="#273a50"/><text x="856" y="187" class="ui label">MATCHES</text><text x="856" y="231" class="ui white" font-size="30" font-weight="700">17</text><text x="912" y="230" class="ui muted small">in latest run</text>
+ <rect x="1108" y="158" width="288" height="104" rx="12" fill="#142235" stroke="#273a50"/><text x="1130" y="187" class="ui label">ENGINE STATUS</text><circle cx="1140" cy="222" r="5" fill="#2dd4bf"/><text x="1156" y="228" class="ui white" font-size="18" font-weight="600">Ready</text><text x="1240" y="228" class="ui muted small">deterministic core</text>
+</g>
+<rect x="286" y="286" width="710" height="432" rx="13" fill="#111e2d" stroke="#293c51"/>
+<text x="310" y="322" class="ui white" font-size="18" font-weight="700">Rule workbench</text><text x="310" y="348" class="ui muted small">Paste a Sigma-style YAML rule or choose a saved rule</text>
+<rect x="310" y="370" width="662" height="292" rx="8" fill="#091321" stroke="#263b51"/>
+<rect x="310" y="370" width="662" height="37" rx="8" fill="#152438"/><circle cx="330" cy="388" r="4" fill="#fb7185"/><circle cx="345" cy="388" r="4" fill="#fbbf24"/><circle cx="360" cy="388" r="4" fill="#34d399"/><text x="386" y="393" class="ui muted small">detect_suspicious_whoami.yml</text>
+<g class="mono">
+<text x="332" y="439" fill="#7dd3fc">title:</text><text x="378" y="439"> Detect Suspicious Whoami Execution</text>
+<text x="332" y="469" fill="#7dd3fc">id:</text><text x="356" y="469"> 11111111-1111-4111-8111-111111111111</text>
+<text x="332" y="499" fill="#7dd3fc">status:</text><text x="391" y="499"> experimental</text>
+<text x="332" y="529" fill="#7dd3fc">logsource:</text><text x="418" y="529"> category: process_creation</text>
+<text x="332" y="559" fill="#7dd3fc">detection:</text><text x="332" y="589">  selection:</text><text x="350" y="619">    Image|endswith: 'whoami.exe'</text><text x="332" y="649">  condition: selection</text>
+</g>
+<rect x="310" y="674" width="132" height="30" rx="7" fill="url(#accent)"/><text x="334" y="694" class="ui" fill="#06151e" font-size="12" font-weight="700">Validate rule</text><rect x="452" y="674" width="130" height="30" rx="7" fill="#1d3147" stroke="#39516a"/><text x="476" y="694" class="ui white" font-size="12">Test events</text><text x="601" y="694" class="ui muted small">Validation is deterministic and local</text>
+<rect x="1012" y="286" width="384" height="432" rx="13" fill="#111e2d" stroke="#293c51"/>
+<text x="1036" y="322" class="ui white" font-size="18" font-weight="700">Validation results</text><rect x="1036" y="344" width="336" height="58" rx="8" fill="#0e302f" stroke="#17645a"/><circle cx="1058" cy="373" r="8" fill="#2dd4bf"/><path d="M1054 373l3 3 6-7" fill="none" stroke="#06221e" stroke-width="2"/><text x="1078" y="370" class="ui" fill="#8ef0d6" font-size="14" font-weight="700">Rule structure valid</text><text x="1078" y="388" class="ui" fill="#8bbcaf" font-size="11">No blocking validation errors</text>
+<text x="1036" y="438" class="ui label">DIAGNOSTICS</text><circle cx="1044" cy="466" r="4" fill="#2dd4bf"/><text x="1058" y="471" class="ui body small">Required fields present</text><circle cx="1044" cy="495" r="4" fill="#2dd4bf"/><text x="1058" y="500" class="ui body small">Detection condition recognized</text><circle cx="1044" cy="524" r="4" fill="#fbbf24"/><text x="1058" y="529" class="ui body small">Subset of Sigma syntax supported</text>
+<line x1="1036" y1="552" x2="1372" y2="552" stroke="#2b4055"/><text x="1036" y="582" class="ui white" font-size="15" font-weight="600">Optional AI review</text><text x="1036" y="607" class="ui muted small">Explain intent, limitations and likely blind spots.</text><rect x="1036" y="632" width="158" height="34" rx="7" fill="#1d3147" stroke="#39516a"/><text x="1057" y="654" class="ui white small">Ask AI to explain</text><text x="1207" y="653" class="ui muted" font-size="10">Requires API key</text>
+<rect x="286" y="742" width="1110" height="176" rx="13" fill="#111e2d" stroke="#293c51"/><text x="310" y="778" class="ui white" font-size="18" font-weight="700">Event test results</text><text x="310" y="802" class="ui muted small">Example output · each event is evaluated against the rule condition</text>
+<text x="310" y="841" class="ui label">EVENT</text><text x="470" y="841" class="ui label">IMAGE</text><text x="970" y="841" class="ui label">RESULT</text><text x="1110" y="841" class="ui label">REASON</text>
+<line x1="310" y1="852" x2="1372" y2="852" stroke="#2b4055"/><text x="310" y="879" class="ui body small">01</text><text x="470" y="879" class="ui mono">C:\Windows\System32\whoami.exe</text><rect x="970" y="862" width="72" height="24" rx="12" fill="#0e302f"/><text x="987" y="879" class="ui" fill="#8ef0d6" font-size="11">MATCH</text><text x="1110" y="879" class="ui body small">Condition matched.</text>
+<text x="310" y="905" class="ui muted small">Concept preview only · illustrative sample values · not a live dashboard</text>
+</svg>

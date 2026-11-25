@@ -100,3 +100,32 @@ See [SECURITY.md](SECURITY.md). Do not include secrets, customer data, or unreda
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+
+## Dashboard concept preview
+
+The image below is a **proposed dashboard design**, not a screenshot of a running frontend. The current release is a FastAPI backend; a React dashboard is still on the roadmap.
+
+![RuleSentry AI dashboard concept preview](docs/dashboard-preview.svg)
+
+### How the dashboard is intended to work
+
+1. **Open the workbench:** The analyst pastes a Sigma-style YAML rule or selects one from a future rule library.
+2. **Validate:** The dashboard sends the rule to `POST /api/v1/rules/validate`. The backend parses the YAML and returns validity, rule metadata, and diagnostics.
+3. **Test events:** The analyst supplies sample JSON events. The dashboard calls `POST /api/v1/rules/test` and displays each event as a match, non-match, or not evaluated when the syntax is unsupported.
+4. **Review results:** A results panel shows validation diagnostics, event match counts, and per-event reasons. Unsupported Sigma syntax is surfaced rather than silently treated as a non-match.
+5. **Optional AI explanation:** The analyst can ask for an explanation through `POST /api/v1/rules/explain`. This requires an OpenRouter API key; AI output is advisory, while deterministic validation and event testing remain authoritative.
+
+### What is implemented today
+
+- FastAPI backend endpoints for health, validation, event testing, and optional AI explanation.
+- A documented, intentionally limited Sigma-style syntax subset.
+- Automated test files and a GitHub Actions workflow configuration.
+
+### What is not implemented yet
+
+- The visual dashboard shown above.
+- Browser-based rule editing, file upload, saved rule library, and interactive result panels.
+- User accounts, persistence, team collaboration, and ATT&CK coverage views.
+
+The dashboard is a planned frontend layer over the existing API. The preview uses illustrative sample values and does not represent live telemetry or actual execution results.
