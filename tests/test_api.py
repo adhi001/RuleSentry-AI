@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
 from rulesentry.main import app
-from rulesentry.sigma_engine import map_attack_tags, test_rule as evaluate_rule, validate_rule
+from rulesentry.sigma_engine import map_attack_tags, validate_rule
+from rulesentry.sigma_engine import test_rule as evaluate_rule
 
 client = TestClient(app)
 
@@ -77,7 +78,6 @@ def test_condition_rejects_unknown_selection_pattern():
     assert result.results[0].matched is None
 
 
-
 def test_attack_mapping_extracts_techniques_and_tactics():
     tagged_rule = RULE.replace(
         "status: experimental",
@@ -132,7 +132,6 @@ def test_attack_coverage_aggregates_rules():
     assert payload["tactics"][0]["tactic"] == "execution"
     assert payload["tactics"][0]["rule_count"] == 2
     assert payload["tactics"][0]["rule_titles"] == ["Detect whoami", "Detect PowerShell"]
-
 
 
 def test_attack_coverage_counts_distinct_rules_with_same_title():
