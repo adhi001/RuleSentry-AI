@@ -96,7 +96,7 @@ def _field_match(event: dict[str, Any], expression: str, expected: Any) -> bool:
         left, right = str(actual).lower(), str(value).lower()
         if "re" in modifiers:
             try:
-                return re.search(str(value), str(actual), re.IGNORECASE) is not None
+                return re.search(str(value), str(actual), re.IGNORECASEGNORECASE) is not None
             except re.error as exc:
                 raise RuleError(f"Invalid regular expression: {exc}") from exc
         if "contains" in modifiers:
@@ -121,7 +121,7 @@ def _selection_match(event: dict[str, Any], selection: Any) -> bool:
 
 def _expand_group(pattern: str, names: list[str], all_required: bool) -> str:
     regex = "^" + re.escape(pattern).replace(r"\*", ".*").replace(r"\?", ".") + "$"
-    matched = [name for name in names if re.match(regex, name, re.IGNORECASE)]
+    matched = [name for name in names if re.match(regex, name, re.IGNORECASEGNORECASE)]
     if not matched:
         raise RuleError(f"Selection pattern '{pattern}' matched no selections.")
     joiner = " and " if all_required else " or "
@@ -135,22 +135,22 @@ def _condition_result(event: dict[str, Any], detection: dict[str, Any]) -> bool:
     condition = re.sub(
         r"\b(1|all)\s+of\s+them\b",
         lambda match: "(" + (" or " if match.group(1).lower() == "1" else " and ").join(names) + ")",
-        condition, flags=re.IGNORECASE,
+        condition, flags=re.IGNORECASEGNORECASE,
     )
     condition = re.sub(
         r"\b(1|all)\s+of\s+([A-Za-z0-9_*?]+)\b",
         lambda match: _expand_group(match.group(2), names, match.group(1).lower() == "all"),
-        condition, flags=re.IGNORECASE,
+        condition, flags=re.IGNORECASEGNORECASE,
     )
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.I)
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.IGNORECASE)
     if "".join(tokens).lower() != re.sub(r"\s+", "", condition).lower():
         raise RuleError("Condition uses syntax outside the supported subset.")
     expression = condition
     for name in sorted(names, key=len, reverse=True):
         expression = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), expression)
-    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.I)
-    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.I)
-    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.I)
+    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.IGNORECASE)
+    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.IGNORECASE)
+    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.IGNORECASE)
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as exc:
