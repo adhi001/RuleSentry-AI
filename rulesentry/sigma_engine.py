@@ -133,8 +133,8 @@ def map_attack_tags(source: str) -> AttackMappingResponse:
 
 def attack_coverage(sources: list[str]) -> AttackCoverageResponse:
     """Aggregate ATT&CK tag coverage across a caller-supplied rule collection."""
-    technique_rules: dict[str, set[str]] = {}
-    tactic_rules: dict[str, set[str]] = {}
+    technique_rules: dict[str, dict[int, str]] = {}
+    tactic_rules: dict[str, dict[int, str]] = {}
     diagnostics: list[Diagnostic] = []
     mapped_rule_ids: set[int] = set()
 
@@ -144,9 +144,9 @@ def attack_coverage(sources: list[str]) -> AttackCoverageResponse:
         if mapping.techniques or mapping.tactics:
             mapped_rule_ids.add(index)
         for technique in mapping.techniques:
-            technique_rules.setdefault(technique, set()).add(title)
+            technique_rules.setdefault(technique, {})[index] = title
         for tactic in mapping.tactics:
-            tactic_rules.setdefault(tactic, set()).add(title)
+            tactic_rules.setdefault(tactic, {})[index] = title
         for diagnostic in mapping.diagnostics:
             diagnostics.append(Diagnostic(
                 severity=diagnostic.severity,
@@ -158,7 +158,7 @@ def attack_coverage(sources: list[str]) -> AttackCoverageResponse:
         AttackTechniqueCoverage(
             technique_id=identifier,
             rule_count=len(titles),
-            rule_titles=sorted(titles),
+            rule_titles=sorted(titles.values()),
         )
         for identifier, titles in sorted(technique_rules.items())
     ]
