@@ -11,25 +11,61 @@ RuleSentry AI is an open-source workbench for detection engineers and security a
 - YAML parsing and structural rule validation.
 - Local event matching for supported field comparisons and simple conditions.
 - Per-event match results and explicit unsupported-syntax diagnostics.
+- Interactive browser dashboard matching the supplied concept design.
 - Optional OpenRouter rule explanation; the core validator works without an API key.
-- FastAPI API, tests, Dockerfile, and contributor/security guidance.
+- FastAPI API, Docker support, tests, and contributor/security guidance.
 
 ## Quick start
 
-Requires Python 3.11+.
+Requires Python 3.11+ and Node.js 20+.
+
+### Run the API and dashboard locally
 
 ```bash
 git clone https://github.com/adhi001/RuleSentry-AI.git
 cd RuleSentry-AI
+
 python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
 pip install -e ".[dev]"
 uvicorn rulesentry.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for interactive API documentation.
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite URL shown in the terminal (normally http://localhost:5173). The development server proxies API requests to http://127.0.0.1:8000. The API's interactive documentation remains at http://127.0.0.1:8000/docs.
+
+### Run the combined application with Docker
+
+```bash
+docker build -t rulesentry-ai .
+docker run --rm -p 8000:8000 --env-file .env rulesentry-ai
+```
+
+Then open http://localhost:8000. The container builds the frontend and serves it through FastAPI.
+
+## Dashboard
+
+The dashboard implements the supplied visual concept: dark navigation sidebar, workspace status cards, YAML rule workbench, validation diagnostics, optional AI explanation, and JSON event testing with per-event results.
+
+The dashboard calls the existing API routes:
+
+- `GET /health` — local engine connection status.
+- `POST /api/v1/rules/validate` — validate the YAML rule.
+- `POST /api/v1/rules/test` — evaluate JSON events against the rule.
+- `POST /api/v1/rules/explain` — optional AI explanation; requires an OpenRouter API key.
+
+Dashboard statistics are session counters based on actions performed in the open browser session. They are not persisted or presented as organization-wide telemetry. The rule library, accounts, and persistent storage are not implemented; the Rule library navigation item is marked as coming soon.
+
+For a separately hosted frontend, set `VITE_API_BASE_URL` at build time to the API origin and configure `RULESENTRY_CORS_ORIGINS` on the API to include the frontend origin.
 
 ## API examples
 
@@ -50,7 +86,7 @@ Open http://127.0.0.1:8000/docs for interactive API documentation.
 ```json
 {
   "rule": "title: Detect whoami\nid: 11111111-1111-4111-8111-111111111111\nstatus: experimental\ndescription: Detect whoami execution\nlogsource:\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: whoami.exe\n  condition: selection\n",
-  "events": [{"Image": "C:\\\\Windows\\\\System32\\\\whoami.exe"}]
+  "events": [{"Image": "C:\\\\\\\\Windows\\\\\\\\System32\\\\\\\\whoami.exe"}]
 }
 ```
 
@@ -70,6 +106,7 @@ Copy `.env.example` to `.env`.
 | `OPENROUTER_MODEL` | OpenRouter model identifier | `openrouter/auto` |
 | `OPENROUTER_BASE_URL` | OpenRouter API base URL | `https://openrouter.ai/api/v1` |
 | `APP_ENV` | Environment label | `development` |
+| `RULESENTRY_CORS_ORIGINS` | Comma-separated allowed browser origins for a separately hosted frontend | localhost Vite origins |
 
 Never commit `.env`, API keys, credentials, or production logs.
 
@@ -79,6 +116,9 @@ Never commit `.env`, API keys, credentials, or production logs.
 pip install -e ".[dev]"
 pytest
 ruff check .
+cd frontend
+npm install
+npm run build
 ```
 
 ## Roadmap
@@ -86,7 +126,7 @@ ruff check .
 - Full Sigma support using pySigma and backend plugins.
 - ATT&CK technique mapping and coverage views.
 - Detection-quality heuristics and false-positive review workflows.
-- Analyst report export and a React frontend.
+- Analyst report export.
 - Persistent rule library, authentication, and team collaboration.
 
 ## Contributing
@@ -101,31 +141,8 @@ See [SECURITY.md](SECURITY.md). Do not include secrets, customer data, or unreda
 
 MIT. See [LICENSE](LICENSE).
 
+## Dashboard concept reference
 
-## Dashboard concept preview
-
-The image below is a **proposed dashboard design**, not a screenshot of a running frontend. The current release is a FastAPI backend; a React dashboard is still on the roadmap.
+The implemented frontend follows this design reference. The preview is illustrative; the live dashboard displays session results returned by the API.
 
 ![RuleSentry AI dashboard concept preview](docs/dashboard-preview.svg)
-
-### How the dashboard is intended to work
-
-1. **Open the workbench:** The analyst pastes a Sigma-style YAML rule or selects one from a future rule library.
-2. **Validate:** The dashboard sends the rule to `POST /api/v1/rules/validate`. The backend parses the YAML and returns validity, rule metadata, and diagnostics.
-3. **Test events:** The analyst supplies sample JSON events. The dashboard calls `POST /api/v1/rules/test` and displays each event as a match, non-match, or not evaluated when the syntax is unsupported.
-4. **Review results:** A results panel shows validation diagnostics, event match counts, and per-event reasons. Unsupported Sigma syntax is surfaced rather than silently treated as a non-match.
-5. **Optional AI explanation:** The analyst can ask for an explanation through `POST /api/v1/rules/explain`. This requires an OpenRouter API key; AI output is advisory, while deterministic validation and event testing remain authoritative.
-
-### What is implemented today
-
-- FastAPI backend endpoints for health, validation, event testing, and optional AI explanation.
-- A documented, intentionally limited Sigma-style syntax subset.
-- Automated test files and a GitHub Actions workflow configuration.
-
-### What is not implemented yet
-
-- The visual dashboard shown above.
-- Browser-based rule editing, file upload, saved rule library, and interactive result panels.
-- User accounts, persistence, team collaboration, and ATT&CK coverage views.
-
-The dashboard is a planned frontend layer over the existing API. The preview uses illustrative sample values and does not represent live telemetry or actual execution results.

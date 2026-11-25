@@ -1,5 +1,6 @@
 """Optional OpenRouter integration. Responses are untrusted advisory text."""
 import os
+
 import httpx
 
 
