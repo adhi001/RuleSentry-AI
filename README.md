@@ -11,7 +11,10 @@ RuleSentry AI is an open-source workbench for detection engineers and security a
 - YAML parsing and structural rule validation, including rejection of duplicate mapping keys.
 - Local event matching for supported field comparisons and simple conditions.
 - Per-event match results and explicit unsupported-syntax diagnostics.
+- Sigma `attack.*` tag extraction for ATT&CK techniques and tactics.
+- Batch ATT&CK coverage reports across caller-supplied rule collections.
 - Optional OpenRouter rule explanation; the core validator works without an API key.
+- Browser dashboard for editing rules, validation diagnostics, event testing, and optional AI explanations.
 - FastAPI API, tests, Dockerfile, and contributor/security guidance.
 
 ## Quick start
@@ -24,12 +27,14 @@ cd RuleSentry-AI
 python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
 pip install -e ".[dev]"
 uvicorn rulesentry.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for interactive API documentation.
+Open **http://127.0.0.1:8000** for the RuleSentry dashboard, or **http://127.0.0.1:8000/docs** for interactive API documentation.
+
+The dashboard is served by the FastAPI application and calls its same-origin API routes. It includes a sample Sigma rule, validation diagnostics, JSON event input and per-event match outcomes, plus an optional AI explanation panel. The AI panel requires `OPENROUTER_API_KEY` on the backend; validation and event testing do not.
 
 ## API examples
 
@@ -39,7 +44,7 @@ Open http://127.0.0.1:8000/docs for interactive API documentation.
 
 ```json
 {
-  "rule": "title: Detect whoami\nid: 11111111-1111-4111-8111-111111111111\nstatus: experimental\ndescription: Detect whoami execution\nlogsource:\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: whoami.exe\n  condition: selection\n"
+  "rule": "title: Detect whoami\\nid: 11111111-1111-4111-8111-111111111111\\nstatus: experimental\\ndescription: Detect whoami execution\\nlogsource:\\n  category: process_creation\\ndetection:\\n  selection:\\n    Image|endswith: whoami.exe\\n  condition: selection\\n"
 }
 ```
 
@@ -49,16 +54,41 @@ Open http://127.0.0.1:8000/docs for interactive API documentation.
 
 ```json
 {
-  "rule": "title: Detect whoami\nid: 11111111-1111-4111-8111-111111111111\nstatus: experimental\ndescription: Detect whoami execution\nlogsource:\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: whoami.exe\n  condition: selection\n",
+  "rule": "title: Detect whoami\\nid: 11111111-1111-4111-8111-111111111111\\nstatus: experimental\\ndescription: Detect whoami execution\\nlogsource:\\n  category: process_creation\\ndetection:\\n  selection:\\n    Image|endswith: whoami.exe\\n  condition: selection\\n",
   "events": [{"Image": "C:\\\\Windows\\\\System32\\\\whoami.exe"}]
 }
 ```
 
 Supported initial subset: exact values, lists, and `contains`, `startswith`, `endswith`, and `re` modifiers; simple `and`, `or`, `not`, parentheses; and `1 of them`, `all of them`, or wildcard selection groups. Unsupported constructs are reported as not evaluated, not silently treated as non-matches.
 
+### MITRE ATT&CK mapping and coverage
+
+RuleSentry reads ATT&CK identifiers from a Sigma rule's `tags` list. Technique tags such as `attack.t1059` and `attack.t1059.001` are normalized to uppercase technique IDs; tactic tags such as `attack.execution` are reported as tactic slugs. Non-ATT&CK tags are ignored. Malformed `attack.*` tags and invalid tag structures produce warnings.
+
+Map one rule with `POST /api/v1/rules/attack-mapping`:
+
+```json
+{
+  "rule": "title: Detect PowerShell\ntags:\n  - attack.execution\n  - attack.t1059\n  - attack.t1059.001\n"
+}
+```
+
+Aggregate coverage with `POST /api/v1/attack/coverage`, supplying the rule collection in the request. The response reports how many rules were analyzed and mapped, plus each technique and tactic's rule count and contributing rule titles:
+
+```json
+{
+  "rules": [
+    "title: Detect PowerShell\ntags:\n  - attack.execution\n  - attack.t1059\n",
+    "title: Detect Script Interpreter\ntags:\n  - attack.execution\n  - attack.t1059.001\n"
+  ]
+}
+```
+
+Coverage is calculated only from the rules supplied in that request; this initial release does not persist a rule library or infer mappings from rule logic. It reports tag-based coverage, not proof that a technique is comprehensively detected. Technique names, tactic descriptions, and live ATT&CK catalogue metadata are not yet enriched.
+
 ### Optional AI explanation
 
-Set `OPENROUTER_API_KEY` and optionally `OPENROUTER_MODEL`, then call `POST /api/v1/rules/explain`. The rule text is sent to OpenRouter. Use sanitized, non-sensitive content only.
+Set `OPENROUTER_API_KEY` and optionally `OPENROUTER_MODEL`, then use the dashboard's AI explanation action or call `POST /api/v1/rules/explain`. The rule text is sent to OpenRouter. Use sanitized, non-sensitive content only.
 
 ## Configuration
 
@@ -84,9 +114,9 @@ ruff check .
 ## Roadmap
 
 - Full Sigma support using pySigma and backend plugins.
-- ATT&CK technique mapping and coverage views.
+- Expand ATT&CK metadata enrichment and coverage visualization.
 - Detection-quality heuristics and false-positive review workflows.
-- Analyst report export and a React frontend.
+- Analyst report export.
 - Persistent rule library, authentication, and team collaboration.
 
 ## Contributing
@@ -118,7 +148,7 @@ The image below is a **proposed dashboard design**, not a screenshot of a runnin
 
 ### What is implemented today
 
-- FastAPI backend endpoints for health, validation, event testing, and optional AI explanation.
+- FastAPI backend endpoints for health, validation, event testing, ATT&CK mapping/coverage, and optional AI explanation.
 - A documented, intentionally limited Sigma-style syntax subset.
 - Automated test files and a GitHub Actions workflow configuration.
 
@@ -126,6 +156,6 @@ The image below is a **proposed dashboard design**, not a screenshot of a runnin
 
 - The visual dashboard shown above.
 - Browser-based rule editing, file upload, saved rule library, and interactive result panels.
-- User accounts, persistence, team collaboration, and ATT&CK coverage views.
+- User accounts, persistent rule storage, team collaboration, and a visual ATT&CK coverage dashboard.
 
 The dashboard is a planned frontend layer over the existing API. The preview uses illustrative sample values and does not represent live telemetry or actual execution results.
