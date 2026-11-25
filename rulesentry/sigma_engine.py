@@ -11,8 +11,14 @@ from typing import Any
 import yaml
 
 from .models import (
-    AttackCoverageResponse, AttackMappingResponse, AttackTacticCoverage,
-    AttackTechniqueCoverage, Diagnostic, EventResult, TestResponse, ValidateResponse,
+    AttackCoverageResponse,
+    AttackMappingResponse,
+    AttackTacticCoverage,
+    AttackTechniqueCoverage,
+    Diagnostic,
+    EventResult,
+    TestResponse,
+    ValidateResponse,
 )
 
 _REQUIRED = ("title", "id", "status", "description", "logsource", "detection")
@@ -241,15 +247,15 @@ def _condition_result(event: dict[str, Any], detection: dict[str, Any]) -> bool:
         lambda match: _expand_group(match.group(2), names, match.group(1).lower() == "all"),
         condition, flags=re.IGNORECASE,
     )
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.I)
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.IGNORECASE)
     if "".join(tokens).lower() != re.sub(r"\s+", "", condition).lower():
         raise RuleError("Condition uses syntax outside the supported subset.")
     expression = condition
     for name in sorted(names, key=len, reverse=True):
         expression = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), expression)
-    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.I)
-    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.I)
-    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.I)
+    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.IGNORECASE)
+    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.IGNORECASE)
+    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.IGNORECASE)
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as exc:
