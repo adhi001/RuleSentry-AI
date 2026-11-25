@@ -1,9 +1,8 @@
 from fastapi.testclient import TestClient
 
 from rulesentry.main import app
+from rulesentry.sigma_engine import map_attack_tags, validate_rule
 from rulesentry.sigma_engine import test_rule as evaluate_rule
-from rulesentry.sigma_engine import validate_rule
-from rulesentry.sigma_engine import map_attack_tags
 
 client = TestClient(app)
 
@@ -110,6 +109,8 @@ def test_test_rule_does_not_evaluate_duplicate_key_rule():
     assert result.supported is False
     assert result.results == []
     assert any(item.code == "yaml.invalid" for item in result.diagnostics)
+
+
 def test_attack_mapping_extracts_techniques_and_tactics():
     tagged_rule = RULE.replace(
         "status: experimental",
