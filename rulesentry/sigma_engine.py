@@ -10,11 +10,16 @@ from typing import Any
 
 import yaml
 
-from .models import Diagnostic, EventResult, TestResponse, ValidateResponse
+from .models import (
+    AttackCoverageResponse, AttackMappingResponse, AttackTacticCoverage,
+    AttackTechniqueCoverage, Diagnostic, EventResult, TestResponse, ValidateResponse,
+)
 
 _REQUIRED = ("title", "id", "status", "description", "logsource", "detection")
 _ALLOWED_STATUS = {"stable", "test", "experimental", "deprecated", "unsupported"}
 _MODIFIERS = {"contains", "startswith", "endswith", "re", "all"}
+_ATTACK_TECHNIQUE = re.compile(r"^attack\\.(t\\d{4}(?:\\.\\d{3})?)$", re.IGNORECASE)
+_ATTACK_TACTIC = re.compile(r"^attack\\.([a-z][a-z0-9_-]*)$", re.IGNORECASE)
 
 
 class RuleError(ValueError):
@@ -80,6 +85,100 @@ def validate_rule(source: str) -> ValidateResponse:
     )
 
 
+def map_attack_tags(source: str) -> AttackMappingResponse:
+    """Extract ATT&CK technique and tactic identifiers from Sigma attack.* tags."""
+    try:
+        rule = parse_rule(source)
+    except RuleError as exc:
+        return AttackMappingResponse(diagnostics=[
+            Diagnostic(severity="error", code="yaml.invalid", message=str(exc))
+        ])
+
+    diagnostics: list[Diagnostic] = []
+    tags = rule.get("tags", [])
+    techniques: set[str] = set()
+    tactics: set[str] = set()
+    if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
+        diagnostics.append(Diagnostic(
+            severity="warning", code="attack.tags.invalid",
+            message="Sigma tags must be a list of strings; ATT&CK mapping was skipped for invalid tags.",
+        ))
+        tags = []
+
+    for tag in tags:
+        normalized = tag.strip().lower()
+        if not normalized.startswith("attack."):
+            continue
+        technique_match = _ATTACK_TECHNIQUE.fullmatch(normalized)
+        if technique_match:
+            techniques.add(technique_match.group(1).upper())
+            continue
+        tactic_match = _ATTACK_TACTIC.fullmatch(normalized)
+        if tactic_match:
+            tactics.add(tactic_match.group(1).replace("-", "_"))
+            continue
+        diagnostics.append(Diagnostic(
+            severity="warning", code="attack.tag.invalid",
+            message=f"Unrecognized ATT&CK tag '{tag}'. Expected attack.t####, attack.t####.###, or an attack tactic slug.",
+        ))
+
+    return AttackMappingResponse(
+        title=rule.get("title") if isinstance(rule.get("title"), str) else None,
+        rule_id=rule.get("id") if isinstance(rule.get("id"), str) else None,
+        techniques=sorted(techniques),
+        tactics=sorted(tactics),
+        diagnostics=diagnostics,
+    )
+
+
+def attack_coverage(sources: list[str]) -> AttackCoverageResponse:
+    """Aggregate ATT&CK tag coverage across a caller-supplied rule collection."""
+    technique_rules: dict[str, set[str]] = {}
+    tactic_rules: dict[str, set[str]] = {}
+    diagnostics: list[Diagnostic] = []
+    mapped_rule_ids: set[int] = set()
+
+    for index, source in enumerate(sources, start=1):
+        mapping = map_attack_tags(source)
+        title = mapping.title or f"Rule {index}"
+        if mapping.techniques or mapping.tactics:
+            mapped_rule_ids.add(index)
+        for technique in mapping.techniques:
+            technique_rules.setdefault(technique, set()).add(title)
+        for tactic in mapping.tactics:
+            tactic_rules.setdefault(tactic, set()).add(title)
+        for diagnostic in mapping.diagnostics:
+            diagnostics.append(Diagnostic(
+                severity=diagnostic.severity,
+                code=diagnostic.code,
+                message=f"Rule {index} ({title}): {diagnostic.message}",
+            ))
+
+    techniques = [
+        AttackTechniqueCoverage(
+            technique_id=identifier,
+            rule_count=len(titles),
+            rule_titles=sorted(titles),
+        )
+        for identifier, titles in sorted(technique_rules.items())
+    ]
+    tactics = [
+        AttackTacticCoverage(
+            tactic=tactic,
+            rule_count=len(titles),
+            rule_titles=sorted(titles),
+        )
+        for tactic, titles in sorted(tactic_rules.items())
+    ]
+    return AttackCoverageResponse(
+        rules_analyzed=len(sources),
+        mapped_rule_count=len(mapped_rule_ids),
+        techniques=techniques,
+        tactics=tactics,
+        diagnostics=diagnostics,
+    )
+
+
 def _field_match(event: dict[str, Any], expression: str, expected: Any) -> bool:
     parts = expression.split("|")
     field, modifiers = parts[0], parts[1:]
@@ -120,7 +219,7 @@ def _selection_match(event: dict[str, Any], selection: Any) -> bool:
 
 
 def _expand_group(pattern: str, names: list[str], all_required: bool) -> str:
-    regex = "^" + re.escape(pattern).replace(r"\*", ".*").replace(r"\?", ".") + "$"
+    regex = "^" + re.escape(pattern).replace(r"\\*", ".*").replace(r"\\?", ".") + "$"
     matched = [name for name in names if re.match(regex, name, re.IGNORECASE)]
     if not matched:
         raise RuleError(f"Selection pattern '{pattern}' matched no selections.")
@@ -133,24 +232,24 @@ def _condition_result(event: dict[str, Any], detection: dict[str, Any]) -> bool:
     values = {name: _selection_match(event, detection[name]) for name in names}
     condition = str(detection["condition"]).strip()
     condition = re.sub(
-        r"\b(1|all)\s+of\s+them\b",
+        r"\\b(1|all)\\s+of\\s+them\\b",
         lambda match: "(" + (" or " if match.group(1).lower() == "1" else " and ").join(names) + ")",
         condition, flags=re.IGNORECASE,
     )
     condition = re.sub(
-        r"\b(1|all)\s+of\s+([A-Za-z0-9_*?]+)\b",
+        r"\\b(1|all)\\s+of\\s+([A-Za-z0-9_*?]+)\\b",
         lambda match: _expand_group(match.group(2), names, match.group(1).lower() == "all"),
         condition, flags=re.IGNORECASE,
     )
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.I)
-    if "".join(tokens).lower() != re.sub(r"\s+", "", condition).lower():
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\\(|\\)|\\bAND\\b|\\bOR\\b|\\bNOT\\b", condition, re.I)
+    if "".join(tokens).lower() != re.sub(r"\\s+", "", condition).lower():
         raise RuleError("Condition uses syntax outside the supported subset.")
     expression = condition
     for name in sorted(names, key=len, reverse=True):
-        expression = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), expression)
-    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.I)
-    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.I)
-    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.I)
+        expression = re.sub(rf"\\b{re.escape(name)}\\b", str(values[name]), expression)
+    expression = re.sub(r"\\bAND\\b", " and ", expression, flags=re.I)
+    expression = re.sub(r"\\bOR\\b", " or ", expression, flags=re.I)
+    expression = re.sub(r"\\bNOT\\b", " not ", expression, flags=re.I)
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as exc:
