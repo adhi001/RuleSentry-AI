@@ -166,7 +166,7 @@ def attack_coverage(sources: list[str]) -> AttackCoverageResponse:
         AttackTacticCoverage(
             tactic=tactic,
             rule_count=len(titles),
-            rule_titles=sorted(titles),
+            rule_titles=sorted(titles.values()),
         )
         for tactic, titles in sorted(tactic_rules.items())
     ]
