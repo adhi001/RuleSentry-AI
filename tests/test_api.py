@@ -131,3 +131,16 @@ def test_attack_coverage_aggregates_rules():
     assert payload["techniques"][0]["rule_count"] == 2
     assert payload["tactics"][0]["tactic"] == "execution"
     assert payload["tactics"][0]["rule_count"] == 2
+
+
+
+def test_attack_coverage_counts_distinct_rules_with_same_title():
+    tagged_rule = RULE.replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.t1059\n",
+    )
+    response = client.post("/api/v1/attack/coverage", json={"rules": [tagged_rule, tagged_rule]})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["techniques"][0]["rule_count"] == 2
+    assert payload["techniques"][0]["rule_titles"] == ["Detect whoami", "Detect whoami"]
