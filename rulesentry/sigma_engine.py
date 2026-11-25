@@ -47,7 +47,7 @@ def validate_rule(source: str) -> ValidateResponse:
     if not isinstance(rule.get("title"), str) or not rule.get("title", "").strip():
         diagnostics.append(Diagnostic(severity="error", code="title.invalid",
                                       message="title must be a non-empty string."))
-    if "status" in rule and rule["status"] not in _ALLOWED_STATUS:
+    if "status" in rule and (not isinstance(rule["status"], str) or rule["status"] not in _ALLOWED_STATUS):
         diagnostics.append(Diagnostic(severity="warning", code="status.unknown",
                                       message="status is not a commonly used Sigma status."))
     if "logsource" in rule and not isinstance(rule["logsource"], dict):
@@ -66,6 +66,9 @@ def validate_rule(source: str) -> ValidateResponse:
             diagnostics.append(Diagnostic(severity="error", code="selection.missing",
                                           message="At least one selection is required."))
         for name in selections:
+            if not isinstance(name, str):
+                diagnostics.append(Diagnostic(severity="error", code="selection.name.invalid",
+                                              message="Selection names must be strings."))
             if not isinstance(detection[name], (dict, list)):
                 diagnostics.append(Diagnostic(severity="error", code="selection.invalid",
                                               message=f"Selection '{name}' must be a mapping or list."))
