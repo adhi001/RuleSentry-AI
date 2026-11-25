@@ -1,6 +1,6 @@
 from pytest import raises
 
-from rulesentry.engine import EngineRegistry, ENGINE_REGISTRY, SigmaSubsetEngine
+from rulesentry.engine import ENGINE_REGISTRY, EngineRegistry, SigmaSubsetEngine
 
 
 def test_default_registry_exposes_sigma_engine():
