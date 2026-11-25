@@ -61,3 +61,17 @@ def test_test_invalid_rule_is_not_evaluated():
     result = evaluate_rule("not: a valid sigma structure", [{"x": "y"}])
     assert result.supported is False
     assert result.results == []
+
+
+def test_validate_rejects_non_string_status():
+    malformed = RULE.replace("status: experimental", "status: [experimental]")
+    result = validate_rule(malformed)
+    assert result.valid is False
+    assert any(item.code == "status.unknown" for item in result.diagnostics)
+
+
+def test_condition_rejects_unknown_selection_pattern():
+    malformed = RULE.replace("condition: selection", "condition: 1 of missing_*")
+    result = evaluate_rule(malformed, [{"Image": "whoami.exe"}])
+    assert result.supported is False
+    assert result.results[0].matched is None
