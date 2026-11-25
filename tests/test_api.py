@@ -131,7 +131,7 @@ def test_attack_coverage_aggregates_rules():
     assert payload["techniques"][0]["rule_count"] == 2
     assert payload["tactics"][0]["tactic"] == "execution"
     assert payload["tactics"][0]["rule_count"] == 2
-    assert payload["tactics"][0]["rule_titles"] == ["Detect whoami", "Detect PowerShell"]
+    assert payload["tactics"][0]["rule_titles"] == ["Detect PowerShell", "Detect whoami"]
 
 
 def test_attack_coverage_counts_distinct_rules_with_same_title():
