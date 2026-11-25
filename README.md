@@ -14,6 +14,7 @@ RuleSentry AI is an open-source workbench for detection engineers and security a
 - Sigma `attack.*` tag extraction for ATT&CK techniques and tactics.
 - Batch ATT&CK coverage reports across caller-supplied rule collections.
 - Optional OpenRouter rule explanation; the core validator works without an API key.
+- Browser dashboard for editing rules, validation diagnostics, event testing, and optional AI explanations.
 - FastAPI API, tests, Dockerfile, and contributor/security guidance.
 
 ## Quick start
@@ -26,12 +27,14 @@ cd RuleSentry-AI
 python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
 pip install -e ".[dev]"
 uvicorn rulesentry.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for interactive API documentation.
+Open **http://127.0.0.1:8000** for the RuleSentry dashboard, or **http://127.0.0.1:8000/docs** for interactive API documentation.
+
+The dashboard is served by the FastAPI application and calls its same-origin API routes. It includes a sample Sigma rule, validation diagnostics, JSON event input and per-event match outcomes, plus an optional AI explanation panel. The AI panel requires `OPENROUTER_API_KEY` on the backend; validation and event testing do not.
 
 ## API examples
 
@@ -41,7 +44,7 @@ Open http://127.0.0.1:8000/docs for interactive API documentation.
 
 ```json
 {
-  "rule": "title: Detect whoami\nid: 11111111-1111-4111-8111-111111111111\nstatus: experimental\ndescription: Detect whoami execution\nlogsource:\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: whoami.exe\n  condition: selection\n"
+  "rule": "title: Detect whoami\\nid: 11111111-1111-4111-8111-111111111111\\nstatus: experimental\\ndescription: Detect whoami execution\\nlogsource:\\n  category: process_creation\\ndetection:\\n  selection:\\n    Image|endswith: whoami.exe\\n  condition: selection\\n"
 }
 ```
 
@@ -51,7 +54,7 @@ Open http://127.0.0.1:8000/docs for interactive API documentation.
 
 ```json
 {
-  "rule": "title: Detect whoami\nid: 11111111-1111-4111-8111-111111111111\nstatus: experimental\ndescription: Detect whoami execution\nlogsource:\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: whoami.exe\n  condition: selection\n",
+  "rule": "title: Detect whoami\\nid: 11111111-1111-4111-8111-111111111111\\nstatus: experimental\\ndescription: Detect whoami execution\\nlogsource:\\n  category: process_creation\\ndetection:\\n  selection:\\n    Image|endswith: whoami.exe\\n  condition: selection\\n",
   "events": [{"Image": "C:\\\\Windows\\\\System32\\\\whoami.exe"}]
 }
 ```
@@ -85,7 +88,7 @@ Coverage is calculated only from the rules supplied in that request; this initia
 
 ### Optional AI explanation
 
-Set `OPENROUTER_API_KEY` and optionally `OPENROUTER_MODEL`, then call `POST /api/v1/rules/explain`. The rule text is sent to OpenRouter. Use sanitized, non-sensitive content only.
+Set `OPENROUTER_API_KEY` and optionally `OPENROUTER_MODEL`, then use the dashboard's AI explanation action or call `POST /api/v1/rules/explain`. The rule text is sent to OpenRouter. Use sanitized, non-sensitive content only.
 
 ## Configuration
 
@@ -113,7 +116,7 @@ ruff check .
 - Full Sigma support using pySigma and backend plugins.
 - Expand ATT&CK metadata enrichment and coverage visualization.
 - Detection-quality heuristics and false-positive review workflows.
-- Analyst report export and a React frontend.
+- Analyst report export.
 - Persistent rule library, authentication, and team collaboration.
 
 ## Contributing

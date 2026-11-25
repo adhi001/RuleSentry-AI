@@ -68,7 +68,7 @@ def test_validate_rejects_non_string_status():
     malformed = RULE.replace("status: experimental", "status: [experimental]")
     result = validate_rule(malformed)
     assert result.valid is False
-    assert any(item.code == "status.unknown" for item in result.diagnostics)
+    assert any(item.code == "status.invalid" for item in result.diagnostics)
 
 
 def test_condition_rejects_unknown_selection_pattern():
