@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from .ai_review import explain_rule
+from .engine import ENGINE_REGISTRY
 from .models import (
     ExplainRequest,
     ExplainResponse,
@@ -13,12 +14,11 @@ from .models import (
     ValidateRequest,
     ValidateResponse,
 )
-from .sigma_engine import test_rule, validate_rule
 
 app = FastAPI(
     title="RuleSentry AI",
     description="AI-assisted Sigma-style rule validation and local event testing.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 
@@ -29,12 +29,12 @@ async def health() -> dict[str, str]:
 
 @app.post("/api/v1/rules/validate", response_model=ValidateResponse)
 async def validate(request: ValidateRequest) -> ValidateResponse:
-    return validate_rule(request.rule)
+    return ENGINE_REGISTRY.get("sigma").validate(request.rule)
 
 
 @app.post("/api/v1/rules/test", response_model=TestResponse)
 async def test(request: TestRequest) -> TestResponse:
-    return test_rule(request.rule, request.events)
+    return ENGINE_REGISTRY.get("sigma").test(request.rule, request.events)
 
 
 @app.post("/api/v1/rules/explain", response_model=ExplainResponse)
