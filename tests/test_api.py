@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
 from rulesentry.main import app
+from rulesentry.sigma_engine import map_attack_tags, validate_rule
 from rulesentry.sigma_engine import test_rule as evaluate_rule
-from rulesentry.sigma_engine import validate_rule
 
 client = TestClient(app)
 
@@ -76,3 +76,71 @@ def test_condition_rejects_unknown_selection_pattern():
     result = evaluate_rule(malformed, [{"Image": "whoami.exe"}])
     assert result.supported is False
     assert result.results[0].matched is None
+
+
+def test_attack_mapping_extracts_techniques_and_tactics():
+    tagged_rule = RULE.replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.execution\n  - attack.t1059\n  - attack.t1059.001\n",
+    )
+    result = map_attack_tags(tagged_rule)
+    assert result.techniques == ["T1059", "T1059.001"]
+    assert result.tactics == ["execution"]
+    assert result.title == "Detect whoami"
+
+
+def test_attack_mapping_warns_on_invalid_tags():
+    tagged_rule = RULE.replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.t1059.01\n",
+    )
+    result = map_attack_tags(tagged_rule)
+    assert result.techniques == []
+    assert any(item.code == "attack.tag.invalid" for item in result.diagnostics)
+
+
+def test_attack_mapping_api_endpoint():
+    tagged_rule = RULE.replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.execution\n  - attack.t1059.001\n",
+    )
+    response = client.post("/api/v1/rules/attack-mapping", json={"rule": tagged_rule})
+    assert response.status_code == 200
+    assert response.json()["techniques"] == ["T1059.001"]
+    assert response.json()["tactics"] == ["execution"]
+
+
+def test_attack_coverage_aggregates_rules():
+    first = RULE.replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.execution\n  - attack.t1059\n",
+    )
+    second = RULE.replace(
+        "title: Detect whoami",
+        "title: Detect PowerShell",
+    ).replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.execution\n  - attack.t1059\n  - attack.t1059.001\n",
+    )
+    response = client.post("/api/v1/attack/coverage", json={"rules": [first, second]})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["rules_analyzed"] == 2
+    assert payload["mapped_rule_count"] == 2
+    assert payload["techniques"][0]["technique_id"] == "T1059"
+    assert payload["techniques"][0]["rule_count"] == 2
+    assert payload["tactics"][0]["tactic"] == "execution"
+    assert payload["tactics"][0]["rule_count"] == 2
+    assert payload["tactics"][0]["rule_titles"] == ["Detect PowerShell", "Detect whoami"]
+
+
+def test_attack_coverage_counts_distinct_rules_with_same_title():
+    tagged_rule = RULE.replace(
+        "status: experimental",
+        "status: experimental\ntags:\n  - attack.t1059\n",
+    )
+    response = client.post("/api/v1/attack/coverage", json={"rules": [tagged_rule, tagged_rule]})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["techniques"][0]["rule_count"] == 2
+    assert payload["techniques"][0]["rule_titles"] == ["Detect whoami", "Detect whoami"]
