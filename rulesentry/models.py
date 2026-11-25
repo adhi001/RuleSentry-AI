@@ -19,6 +19,38 @@ class ValidateResponse(BaseModel):
     diagnostics: list[Diagnostic] = Field(default_factory=list)
 
 
+class AttackMappingResponse(BaseModel):
+    title: str | None = None
+    rule_id: str | None = None
+    techniques: list[str] = Field(default_factory=list)
+    tactics: list[str] = Field(default_factory=list)
+    diagnostics: list[Diagnostic] = Field(default_factory=list)
+
+
+class AttackCoverageRequest(BaseModel):
+    rules: list[str] = Field(min_length=1, max_length=500)
+
+
+class AttackTechniqueCoverage(BaseModel):
+    technique_id: str
+    rule_count: int
+    rule_titles: list[str]
+
+
+class AttackTacticCoverage(BaseModel):
+    tactic: str
+    rule_count: int
+    rule_titles: list[str]
+
+
+class AttackCoverageResponse(BaseModel):
+    rules_analyzed: int
+    mapped_rule_count: int
+    techniques: list[AttackTechniqueCoverage] = Field(default_factory=list)
+    tactics: list[AttackTacticCoverage] = Field(default_factory=list)
+    diagnostics: list[Diagnostic] = Field(default_factory=list)
+
+
 class TestRequest(ValidateRequest):
     events: list[dict[str, object]] = Field(min_length=1, max_length=500)
 
