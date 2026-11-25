@@ -18,8 +18,8 @@ from .models import (
 _REQUIRED = ("title", "id", "status", "description", "logsource", "detection")
 _ALLOWED_STATUS = {"stable", "test", "experimental", "deprecated", "unsupported"}
 _MODIFIERS = {"contains", "startswith", "endswith", "re", "all"}
-_ATTACK_TECHNIQUE = re.compile(r"^attack\\.(t\\d{4}(?:\\.\\d{3})?)$", re.IGNORECASE)
-_ATTACK_TACTIC = re.compile(r"^attack\\.([a-z][a-z0-9_-]*)$", re.IGNORECASE)
+_ATTACK_TECHNIQUE = re.compile(r"^attack\.(t\d{4}(?:\.\d{3})?)$", re.IGNORECASE)
+_ATTACK_TACTIC = re.compile(r"^attack\.([a-z][a-z0-9_-]*)$", re.IGNORECASE)
 
 
 class RuleError(ValueError):
@@ -219,7 +219,7 @@ def _selection_match(event: dict[str, Any], selection: Any) -> bool:
 
 
 def _expand_group(pattern: str, names: list[str], all_required: bool) -> str:
-    regex = "^" + re.escape(pattern).replace(r"\\*", ".*").replace(r"\\?", ".") + "$"
+    regex = "^" + re.escape(pattern).replace(r"\*", ".*").replace(r"\?", ".") + "$"
     matched = [name for name in names if re.match(regex, name, re.IGNORECASE)]
     if not matched:
         raise RuleError(f"Selection pattern '{pattern}' matched no selections.")
@@ -232,24 +232,24 @@ def _condition_result(event: dict[str, Any], detection: dict[str, Any]) -> bool:
     values = {name: _selection_match(event, detection[name]) for name in names}
     condition = str(detection["condition"]).strip()
     condition = re.sub(
-        r"\\b(1|all)\\s+of\\s+them\\b",
+        r"\b(1|all)\s+of\s+them\b",
         lambda match: "(" + (" or " if match.group(1).lower() == "1" else " and ").join(names) + ")",
         condition, flags=re.IGNORECASE,
     )
     condition = re.sub(
-        r"\\b(1|all)\\s+of\\s+([A-Za-z0-9_*?]+)\\b",
+        r"\b(1|all)\s+of\s+([A-Za-z0-9_*?]+)\b",
         lambda match: _expand_group(match.group(2), names, match.group(1).lower() == "all"),
         condition, flags=re.IGNORECASE,
     )
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\\(|\\)|\\bAND\\b|\\bOR\\b|\\bNOT\\b", condition, re.I)
-    if "".join(tokens).lower() != re.sub(r"\\s+", "", condition).lower():
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.I)
+    if "".join(tokens).lower() != re.sub(r"\s+", "", condition).lower():
         raise RuleError("Condition uses syntax outside the supported subset.")
     expression = condition
     for name in sorted(names, key=len, reverse=True):
-        expression = re.sub(rf"\\b{re.escape(name)}\\b", str(values[name]), expression)
-    expression = re.sub(r"\\bAND\\b", " and ", expression, flags=re.I)
-    expression = re.sub(r"\\bOR\\b", " or ", expression, flags=re.I)
-    expression = re.sub(r"\\bNOT\\b", " not ", expression, flags=re.I)
+        expression = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), expression)
+    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.I)
+    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.I)
+    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.I)
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as exc:
