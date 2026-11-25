@@ -92,6 +92,22 @@ For a separately hosted frontend, set `VITE_API_BASE_URL` at build time to the A
 
 Supported initial subset: exact values, lists, and `contains`, `startswith`, `endswith`, and `re` modifiers; simple `and`, `or`, `not`, parentheses; and `1 of them`, `all of them`, or wildcard selection groups. Unsupported constructs are reported as not evaluated, not silently treated as non-matches.
 
+### MITRE ATT&CK mapping and coverage
+
+RuleSentry reads ATT&CK identifiers from a Sigma rule's `tags` list. Technique tags such as `attack.t1059` and `attack.t1059.001` are normalized to uppercase technique IDs; tactic tags such as `attack.execution` are reported as tactic slugs. Non-ATT&CK tags are ignored. Malformed `attack.*` tags and invalid tag structures produce warnings.
+
+Map one rule with `POST /api/v1/rules/attack-mapping`:
+
+```json
+{
+  "rule": "title: Detect PowerShell\ntags:\n  - attack.execution\n  - attack.t1059\n  - attack.t1059.001\n"
+}
+```
+
+Aggregate coverage with `POST /api/v1/attack/coverage`, supplying the rule collection in the request. The response reports how many rules were analyzed and mapped, plus each technique and tactic's rule count and contributing rule titles.
+
+Coverage is calculated only from the rules supplied in that request; this release does not persist a rule library or infer mappings from rule logic. It reports tag-based coverage, not proof that a technique is comprehensively detected. Technique names, tactic descriptions, and live ATT&CK catalogue metadata are not yet enriched.
+
 ### Optional AI explanation
 
 Set `OPENROUTER_API_KEY` and optionally `OPENROUTER_MODEL`, then call `POST /api/v1/rules/explain`. The rule text is sent to OpenRouter. Use sanitized, non-sensitive content only.
