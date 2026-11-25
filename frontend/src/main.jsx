@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity, AlertCircle, BookOpen, Check, CheckCircle2, ChevronRight,
-  CircleHelp, Code2, FileCode2, FlaskConical, Gauge, KeyRound, LayoutDashboard,
+  Activity, AlertCircle, BookOpen, CheckCircle2, ChevronRight,
+  Code2, FileCode2, FlaskConical, KeyRound, LayoutDashboard,
   LoaderCircle, MessageSquareText, Play, RefreshCw, Settings, ShieldCheck,
   Sparkles, TerminalSquare, Wifi, WifiOff, XCircle
 } from "lucide-react";
@@ -21,8 +21,8 @@ detection:
   condition: selection
 `;
 const SAMPLE_EVENTS = [
-  { Image: "C:\\\\Windows\\\\System32\\\\whoami.exe", ParentImage: "C:\\\\Windows\\\\System32\\\\cmd.exe" },
-  { Image: "C:\\\\Windows\\\\System32\\\\notepad.exe", ParentImage: "C:\\\\Windows\\\\explorer.exe" }
+  { Image: "C:\\Windows\\System32\\whoami.exe", ParentImage: "C:\\Windows\\System32\\cmd.exe" },
+  { Image: "C:\\Windows\\System32\\notepad.exe", ParentImage: "C:\\Windows\\explorer.exe" }
 ];
 
 async function api(path, body) {
