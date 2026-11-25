@@ -1,5 +1,8 @@
 """FastAPI application for RuleSentry AI."""
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from .ai_review import explain_rule
 from .models import (
@@ -11,7 +14,7 @@ from .sigma_engine import test_rule, validate_rule
 app = FastAPI(
     title="RuleSentry AI",
     description="AI-assisted Sigma-style rule validation and local event testing.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 
@@ -39,3 +42,8 @@ async def explain(request: ExplainRequest) -> ExplainResponse:
     except Exception as exc:
         raise HTTPException(status_code=502, detail="AI provider request failed.") from exc
     return ExplainResponse(available=True, model=model, explanation=explanation)
+
+
+# Serve the browser workbench after API routes so /api/* and /health remain API endpoints.
+_frontend = Path(__file__).resolve().parent.parent / "frontend"
+app.mount("/", StaticFiles(directory=_frontend, html=True), name="dashboard")
