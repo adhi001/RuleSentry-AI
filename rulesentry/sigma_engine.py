@@ -9,21 +9,60 @@ import re
 from typing import Any
 
 import yaml
+from yaml.constructor import ConstructorError
+from yaml.nodes import MappingNode
 
-from .models import Diagnostic, EventResult, TestResponse, ValidateResponse
+from .models import (
+    AttackCoverageResponse,
+    AttackMappingResponse,
+    AttackTacticCoverage,
+    AttackTechniqueCoverage,
+    Diagnostic,
+    EventResult,
+    TestResponse,
+    ValidateResponse,
+)
 
 _REQUIRED = ("title", "id", "status", "description", "logsource", "detection")
 _ALLOWED_STATUS = {"stable", "test", "experimental", "deprecated", "unsupported"}
 _MODIFIERS = {"contains", "startswith", "endswith", "re", "all"}
+_ATTACK_TECHNIQUE = re.compile(r"^attack\.(t\d{4}(?:\.\d{3})?)$", re.IGNORECASE)
+_ATTACK_TACTIC = re.compile(r"^attack\.([a-z][a-z0-9_-]*)$", re.IGNORECASE)
 
 
 class RuleError(ValueError):
     """Raised when input cannot be interpreted by this subset engine."""
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """Safe YAML loader that rejects duplicate mapping keys."""
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict[Any, Any]:
+        if not isinstance(node, MappingNode):
+            raise ConstructorError(None, None, "expected a mapping node", node.start_mark)
+        self.flatten_mapping(node)
+        mapping: dict[Any, Any] = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                hash(key)
+            except TypeError as exc:
+                raise ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    "found an unhashable key", key_node.start_mark,
+                ) from exc
+            if key in mapping:
+                raise ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    f"found duplicate key {key!r}", key_node.start_mark,
+                )
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
+
 def parse_rule(source: str) -> dict[str, Any]:
     try:
-        value = yaml.safe_load(source)
+        value = yaml.load(source, Loader=_UniqueKeyLoader)
     except yaml.YAMLError as exc:
         raise RuleError(f"Invalid YAML: {exc}") from exc
     if not isinstance(value, dict):
@@ -47,20 +86,12 @@ def validate_rule(source: str) -> ValidateResponse:
     if not isinstance(rule.get("title"), str) or not rule.get("title", "").strip():
         diagnostics.append(Diagnostic(severity="error", code="title.invalid",
                                       message="title must be a non-empty string."))
-    if "status" in rule:
-        status = rule["status"]
-        if not isinstance(status, str):
-            diagnostics.append(Diagnostic(
-                severity="error",
-                code="status.unknown",
-                message="status must be a string.",
-            ))
-        elif status not in _ALLOWED_STATUS:
-            diagnostics.append(Diagnostic(
-                severity="warning",
-                code="status.unknown",
-                message="status is not a commonly used Sigma status.",
-            ))
+    if "status" in rule and not isinstance(rule["status"], str):
+        diagnostics.append(Diagnostic(severity="error", code="status.invalid",
+                                      message="status must be a string."))
+    elif "status" in rule and rule["status"] not in _ALLOWED_STATUS:
+        diagnostics.append(Diagnostic(severity="warning", code="status.unknown",
+                                      message="status is not a commonly used Sigma status."))
     if "logsource" in rule and not isinstance(rule["logsource"], dict):
         diagnostics.append(Diagnostic(severity="error", code="logsource.invalid",
                                       message="logsource must be a mapping."))
@@ -87,6 +118,100 @@ def validate_rule(source: str) -> ValidateResponse:
         valid=not any(item.severity == "error" for item in diagnostics),
         title=rule.get("title") if isinstance(rule.get("title"), str) else None,
         rule_id=rule.get("id") if isinstance(rule.get("id"), str) else None,
+        diagnostics=diagnostics,
+    )
+
+
+def map_attack_tags(source: str) -> AttackMappingResponse:
+    """Extract ATT&CK technique and tactic identifiers from Sigma attack.* tags."""
+    try:
+        rule = parse_rule(source)
+    except RuleError as exc:
+        return AttackMappingResponse(diagnostics=[
+            Diagnostic(severity="error", code="yaml.invalid", message=str(exc))
+        ])
+
+    diagnostics: list[Diagnostic] = []
+    tags = rule.get("tags", [])
+    techniques: set[str] = set()
+    tactics: set[str] = set()
+    if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
+        diagnostics.append(Diagnostic(
+            severity="warning", code="attack.tags.invalid",
+            message="Sigma tags must be a list of strings; ATT&CK mapping was skipped for invalid tags.",
+        ))
+        tags = []
+
+    for tag in tags:
+        normalized = tag.strip().lower()
+        if not normalized.startswith("attack."):
+            continue
+        technique_match = _ATTACK_TECHNIQUE.fullmatch(normalized)
+        if technique_match:
+            techniques.add(technique_match.group(1).upper())
+            continue
+        tactic_match = _ATTACK_TACTIC.fullmatch(normalized)
+        if tactic_match:
+            tactics.add(tactic_match.group(1).replace("-", "_"))
+            continue
+        diagnostics.append(Diagnostic(
+            severity="warning", code="attack.tag.invalid",
+            message=f"Unrecognized ATT&CK tag '{tag}'. Expected attack.t####, attack.t####.###, or an attack tactic slug.",
+        ))
+
+    return AttackMappingResponse(
+        title=rule.get("title") if isinstance(rule.get("title"), str) else None,
+        rule_id=rule.get("id") if isinstance(rule.get("id"), str) else None,
+        techniques=sorted(techniques),
+        tactics=sorted(tactics),
+        diagnostics=diagnostics,
+    )
+
+
+def attack_coverage(sources: list[str]) -> AttackCoverageResponse:
+    """Aggregate ATT&CK tag coverage across a caller-supplied rule collection."""
+    technique_rules: dict[str, dict[int, str]] = {}
+    tactic_rules: dict[str, dict[int, str]] = {}
+    diagnostics: list[Diagnostic] = []
+    mapped_rule_ids: set[int] = set()
+
+    for index, source in enumerate(sources, start=1):
+        mapping = map_attack_tags(source)
+        title = mapping.title or f"Rule {index}"
+        if mapping.techniques or mapping.tactics:
+            mapped_rule_ids.add(index)
+        for technique in mapping.techniques:
+            technique_rules.setdefault(technique, {})[index] = title
+        for tactic in mapping.tactics:
+            tactic_rules.setdefault(tactic, {})[index] = title
+        for diagnostic in mapping.diagnostics:
+            diagnostics.append(Diagnostic(
+                severity=diagnostic.severity,
+                code=diagnostic.code,
+                message=f"Rule {index} ({title}): {diagnostic.message}",
+            ))
+
+    techniques = [
+        AttackTechniqueCoverage(
+            technique_id=identifier,
+            rule_count=len(titles),
+            rule_titles=sorted(titles.values()),
+        )
+        for identifier, titles in sorted(technique_rules.items())
+    ]
+    tactics = [
+        AttackTacticCoverage(
+            tactic=tactic,
+            rule_count=len(titles),
+            rule_titles=sorted(titles.values()),
+        )
+        for tactic, titles in sorted(tactic_rules.items())
+    ]
+    return AttackCoverageResponse(
+        rules_analyzed=len(sources),
+        mapped_rule_count=len(mapped_rule_ids),
+        techniques=techniques,
+        tactics=tactics,
         diagnostics=diagnostics,
     )
 
