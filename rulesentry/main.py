@@ -8,6 +8,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .ai_review import explain_rule
 from .models import (
+    AttackCoverageRequest,
+    AttackCoverageResponse,
+    AttackMappingResponse,
     ExplainRequest,
     ExplainResponse,
     TestRequest,
@@ -15,12 +18,12 @@ from .models import (
     ValidateRequest,
     ValidateResponse,
 )
-from .sigma_engine import test_rule, validate_rule
+from .sigma_engine import attack_coverage, map_attack_tags, test_rule, validate_rule
 
 app = FastAPI(
     title="RuleSentry AI",
     description="AI-assisted Sigma-style rule validation and local event testing.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 allowed_origins = [
@@ -54,6 +57,16 @@ async def test(request: TestRequest) -> TestResponse:
     return test_rule(request.rule, request.events)
 
 
+@app.post("/api/v1/rules/attack-mapping", response_model=AttackMappingResponse)
+async def attack_mapping(request: ValidateRequest) -> AttackMappingResponse:
+    return map_attack_tags(request.rule)
+
+
+@app.post("/api/v1/attack/coverage", response_model=AttackCoverageResponse)
+async def attack_coverage_report(request: AttackCoverageRequest) -> AttackCoverageResponse:
+    return attack_coverage(request.rules)
+
+
 @app.post("/api/v1/rules/explain", response_model=ExplainResponse)
 async def explain(request: ExplainRequest) -> ExplainResponse:
     try:
@@ -65,8 +78,8 @@ async def explain(request: ExplainRequest) -> ExplainResponse:
     return ExplainResponse(available=True, model=model, explanation=explanation)
 
 
-# In production the Docker image includes the compiled Vite app. Mounting it
-# after the API routes keeps /health and /api/* handled by FastAPI.
+# In production the Docker image includes the compiled Vite app. Mount it
+# after the API routes so /health and /api/* remain handled by FastAPI.
 frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if frontend_dist.is_dir():
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="dashboard")
