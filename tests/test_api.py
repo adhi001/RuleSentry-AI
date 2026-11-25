@@ -81,7 +81,7 @@ def test_condition_rejects_unknown_selection_pattern():
 def test_validate_rejects_duplicate_top_level_yaml_keys():
     malformed = RULE.replace(
         "status: experimental",
-        "status: experimental\x5cnstatus: stable",
+        "status: experimental\nstatus: stable",
     )
     result = validate_rule(malformed)
     assert result.valid is False
@@ -92,7 +92,7 @@ def test_validate_rejects_duplicate_top_level_yaml_keys():
 def test_validate_rejects_duplicate_detection_fields():
     malformed = RULE.replace(
         "    Image|endswith: whoami.exe",
-        "    Image|endswith: whoami.exe\x5cn    Image|endswith: powershell.exe",
+        "    Image|endswith: whoami.exe\n    Image|endswith: powershell.exe",
     )
     result = validate_rule(malformed)
     assert result.valid is False
@@ -102,7 +102,7 @@ def test_validate_rejects_duplicate_detection_fields():
 def test_test_rule_does_not_evaluate_duplicate_key_rule():
     malformed = RULE.replace(
         "status: experimental",
-        "status: experimental\x5cnstatus: stable",
+        "status: experimental\nstatus: stable",
     )
     result = evaluate_rule(malformed, [{"Image": "whoami.exe"}])
     assert result.supported is False
