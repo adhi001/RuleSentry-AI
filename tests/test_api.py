@@ -72,6 +72,6 @@ def test_validate_rejects_non_string_status():
 
 def test_condition_rejects_unknown_selection_pattern():
     malformed = RULE.replace("condition: selection", "condition: 1 of missing_*")
-    result = test_rule(malformed, [{"Image": "whoami.exe"}])
+    result = evaluate_rule(malformed, [{"Image": "whoami.exe"}])
     assert result.supported is False
     assert result.results[0].matched is None
