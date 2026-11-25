@@ -135,22 +135,22 @@ def _condition_result(event: dict[str, Any], detection: dict[str, Any]) -> bool:
     condition = re.sub(
         r"\b(1|all)\s+of\s+them\b",
         lambda match: "(" + (" or " if match.group(1).lower() == "1" else " and ").join(names) + ")",
-        condition, flags=re.IGNORECASE,
+        condition, flags=re.IGNORECASEGNORECASE,
     )
     condition = re.sub(
         r"\b(1|all)\s+of\s+([A-Za-z0-9_*?]+)\b",
         lambda match: _expand_group(match.group(2), names, match.group(1).lower() == "all"),
-        condition, flags=re.IGNORECASE,
+        condition, flags=re.IGNORECASEGNORECASE,
     )
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.I)
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.IGNORECASE)
     if "".join(tokens).lower() != re.sub(r"\s+", "", condition).lower():
         raise RuleError("Condition uses syntax outside the supported subset.")
     expression = condition
     for name in sorted(names, key=len, reverse=True):
         expression = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), expression)
-    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.I)
-    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.I)
-    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.I)
+    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.IGNORECASEGNORECASE)
+    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.IGNORECASEGNORECASE)
+    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.IGNORECASEGNORECASE)
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as exc:
