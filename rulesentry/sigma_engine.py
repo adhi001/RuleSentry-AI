@@ -47,7 +47,10 @@ def validate_rule(source: str) -> ValidateResponse:
     if not isinstance(rule.get("title"), str) or not rule.get("title", "").strip():
         diagnostics.append(Diagnostic(severity="error", code="title.invalid",
                                       message="title must be a non-empty string."))
-    if "status" in rule and (not isinstance(rule["status"], str) or rule["status"] not in _ALLOWED_STATUS):
+    if "status" in rule and not isinstance(rule["status"], str):
+        diagnostics.append(Diagnostic(severity="error", code="status.invalid",
+                                      message="status must be a string."))
+    elif "status" in rule and rule["status"] not in _ALLOWED_STATUS:
         diagnostics.append(Diagnostic(severity="warning", code="status.unknown",
                                       message="status is not a commonly used Sigma status."))
     if "logsource" in rule and not isinstance(rule["logsource"], dict):
@@ -142,15 +145,15 @@ def _condition_result(event: dict[str, Any], detection: dict[str, Any]) -> bool:
         lambda match: _expand_group(match.group(2), names, match.group(1).lower() == "all"),
         condition, flags=re.IGNORECASE,
     )
-    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.I)
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\(|\)|\bAND\b|\bOR\b|\bNOT\b", condition, re.IGNORECASE)
     if "".join(tokens).lower() != re.sub(r"\s+", "", condition).lower():
         raise RuleError("Condition uses syntax outside the supported subset.")
     expression = condition
     for name in sorted(names, key=len, reverse=True):
         expression = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), expression)
-    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.I)
-    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.I)
-    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.I)
+    expression = re.sub(r"\bAND\b", " and ", expression, flags=re.IGNORECASE)
+    expression = re.sub(r"\bOR\b", " or ", expression, flags=re.IGNORECASE)
+    expression = re.sub(r"\bNOT\b", " not ", expression, flags=re.IGNORECASE)
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as exc:

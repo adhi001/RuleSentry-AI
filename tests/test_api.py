@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
 from rulesentry.main import app
-from rulesentry.sigma_engine import test_rule as evaluate_rule, validate_rule
+from rulesentry.sigma_engine import test_rule as evaluate_rule
+from rulesentry.sigma_engine import validate_rule
 
 client = TestClient(app)
 
@@ -67,7 +68,7 @@ def test_validate_rejects_non_string_status():
     malformed = RULE.replace("status: experimental", "status: [experimental]")
     result = validate_rule(malformed)
     assert result.valid is False
-    assert any(item.code == "status.unknown" for item in result.diagnostics)
+    assert any(item.code == "status.invalid" for item in result.diagnostics)
 
 
 def test_condition_rejects_unknown_selection_pattern():
