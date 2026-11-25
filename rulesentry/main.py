@@ -1,5 +1,10 @@
 """FastAPI application for RuleSentry AI."""
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .ai_review import explain_rule
 from .models import (
@@ -12,6 +17,21 @@ app = FastAPI(
     title="RuleSentry AI",
     description="AI-assisted Sigma-style rule validation and local event testing.",
     version="0.1.0",
+)
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "RULESENTRY_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -39,3 +59,10 @@ async def explain(request: ExplainRequest) -> ExplainResponse:
     except Exception as exc:
         raise HTTPException(status_code=502, detail="AI provider request failed.") from exc
     return ExplainResponse(available=True, model=model, explanation=explanation)
+
+
+# In production the Docker image includes the compiled Vite app. Mounting it
+# after the API routes keeps /health and /api/* handled by FastAPI.
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="dashboard")
