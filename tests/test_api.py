@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
 from rulesentry.main import app
-from rulesentry.sigma_engine import test_rule as evaluate_rule, validate_rule
+from rulesentry.sigma_engine import test_rule as evaluate_rule
+from rulesentry.sigma_engine import validate_rule
 
 client = TestClient(app)
 
