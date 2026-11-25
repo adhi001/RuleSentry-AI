@@ -8,7 +8,7 @@ RuleSentry AI is an open-source workbench for detection engineers and security a
 
 ## Features
 
-- YAML parsing and structural rule validation.
+- YAML parsing and structural rule validation, including rejection of duplicate mapping keys.
 - Local event matching for supported field comparisons and simple conditions.
 - Per-event match results and explicit unsupported-syntax diagnostics.
 - Sigma `attack.*` tag extraction for ATT&CK techniques and tactics.

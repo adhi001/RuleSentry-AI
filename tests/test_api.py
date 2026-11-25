@@ -78,6 +78,39 @@ def test_condition_rejects_unknown_selection_pattern():
     assert result.results[0].matched is None
 
 
+
+def test_validate_rejects_duplicate_top_level_yaml_keys():
+    malformed = RULE.replace(
+        "status: experimental",
+        "status: experimental\nstatus: stable",
+    )
+    result = validate_rule(malformed)
+    assert result.valid is False
+    assert any(item.code == "yaml.invalid" for item in result.diagnostics)
+    assert "duplicate key" in result.diagnostics[0].message.lower()
+
+
+def test_validate_rejects_duplicate_detection_fields():
+    malformed = RULE.replace(
+        "    Image|endswith: whoami.exe",
+        "    Image|endswith: whoami.exe\n    Image|endswith: powershell.exe",
+    )
+    result = validate_rule(malformed)
+    assert result.valid is False
+    assert any(item.code == "yaml.invalid" for item in result.diagnostics)
+
+
+def test_test_rule_does_not_evaluate_duplicate_key_rule():
+    malformed = RULE.replace(
+        "status: experimental",
+        "status: experimental\nstatus: stable",
+    )
+    result = evaluate_rule(malformed, [{"Image": "whoami.exe"}])
+    assert result.supported is False
+    assert result.results == []
+    assert any(item.code == "yaml.invalid" for item in result.diagnostics)
+
+
 def test_attack_mapping_extracts_techniques_and_tactics():
     tagged_rule = RULE.replace(
         "status: experimental",
